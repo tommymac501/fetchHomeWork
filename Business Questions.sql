@@ -142,14 +142,14 @@ select top(1)
 		when 'FINISHED' then 'Accepted'
 		when 'REJECTED' then 'Rejected'
 		end as program,
-		records
+		format(average,'C') as amount
 from avgAcceptedSpend
 where program in ('FINISHED','REJECTED')
-order by records DESC 
+order by average DESC 
 
 
 /*   When considering total number of items purchased from receipts with 'rewardsReceiptStatus’ of ‘Accepted’ or ‘Rejected’, which is greater?   */
-with totalItems (program, itemCount, records)
+with totalItems (program, purchasedItemCount, records)
 as
 (	
 select
@@ -166,14 +166,13 @@ select top(1)
 		when 'FINISHED' then 'Accepted'
 		when 'REJECTED' then 'Rejected'
 		end as program,
-		itemCount
+		purchasedItemCount
 from totalItems
 where program in ('FINISHED','REJECTED')
-order by records DESC 
+order by purchasedItemCount DESC 
 
 /*   Which brand has the most spend among users who were created within the past 6 months?  */
 
--- Assuming they want all purchases, not just active user purchases
 declare @maxCeatedDate date 
 select @maxCeatedDate = (select max(createdDate) from users) 
 
@@ -184,7 +183,7 @@ as (
 	from users u
 	where createddate > dateadd(month,-6, @maxCeatedDate) and role = 'consumer' and u.active = 1
 )
-SELECT top (1) b.name, sum(r.totalSpent)
+SELECT top (1) b.name, format(sum(r.totalSpent),'C') as spend
 FROM userList ul
 left join receipts r
 	on ul.userID = r.userID
