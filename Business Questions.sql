@@ -73,54 +73,38 @@ on
 
 
 /*  What are the top 5 brands by receipts scanned for most recent month?  */
-declare @maxMonth int, @previousMonth int -- THis is not a current data set, so the "past 6 months" wont produce any data. We need to go back in time to get that
 
-select @maxMonth = (select datepart(month,cast(max(datescanned) as date)) from receipts) -- get the most recent month
-select @previousMonth = @maxMonth - 1
+declare @maxMonth INT, @maxYear INT
 
-;with currentBrandSales (Brand, monthSold)
-as (
-	select b.name as Brand, datepart(month,r.dateScanned) as monthSold
-	from receipts r
-	left join Brands b
-		on r.barcode = b.barcode
-	where isnull(r.barcode,'') <> '' 
-	and datepart(month,r.dateScanned) = @maxMonth
+select 
+    @maxyear = datepart(year, cast(max(r.datescanned) as date)),
+    @maxmonth = datepart(month, cast(max(r.datescanned) as date))
+from Receipts r 
+
+;with currentBrandsales as (
+    select 
+        b.name as brand,
+        datepart(month, r.datescanned) as monthsold,
+        count(*) as scan_count
+    from  Receipts r 
+    left join Brands b
+    on 
+        r.barcode = b.barcode
+    where 
+        isnull(r.barcode, '') <> ''
+        and datepart(year, r.datescanned) = @maxyear
+        and datepart(month, r.datescanned) = @maxmonth
+    group by 
+        b.name, datepart(month, r.datescanned)
 )
-select top (5) Brand, monthSold
-from currentBrandSales
-order by Brand
+select top (5) 
+    brand,
+    monthsold,
+    scan_count
+from currentBrandsales
+order by scan_count desc
 
-
-
-/*   How does the ranking of the top 5 brands by receipts scanned for the recent month compare to the ranking for the previous month?   */
-declare @maxMonth int, @previousMonth int -- THis is not a current data set, so the "past 6 months" wont produce any data. We need to go back in time to get that
-
-select @maxMonth = (select datepart(month,cast(max(datescanned) as date)) from receipts) -- get the most recent month
-select @previousMonth = @maxMonth - 1
-
-;with currentBrandSales (Brand, monthSold, RecordCount)
-as (
-	select b.name as Brand, datepart(month,r.dateScanned) as monthSold, count(*) as RecordCount
-	from receipts r
-	left join Brands b
-		on r.barcode = b.barcode
-	where isnull(name,'') <> '' 
-	and datepart(month,r.dateScanned) = @maxMonth
-	group by b.name, datepart(month,r.dateScanned)
-),
-previousBrandSales (Brand, monthSold, RecordCount)
-as(
-	select b.name as Brand, datepart(month,r.dateScanned) as monthSold, count(*) as RecordCount
-	from receipts r
-	left join Brands b
-		on r.barcode = b.barcode
-	where isnull(name,'') <> '' 
-	and datepart(month,r.dateScanned) = @maxMonth
-	group by b.name, datepart(month,r.dateScanned)
-)
-select Brand, monthSold, RecordCount
-from currentBrandSales
+--*** Without proper brand data, this query only returns scans, not brands.
 
 
 
@@ -170,6 +154,7 @@ select top(1)
 from totalItems
 where program in ('FINISHED','REJECTED')
 order by purchasedItemCount DESC 
+
 
 /*   Which brand has the most spend among users who were created within the past 6 months?  */
 
